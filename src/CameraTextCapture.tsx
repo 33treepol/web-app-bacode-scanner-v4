@@ -1,6 +1,14 @@
 import React, { useRef, useState } from "react";
 import Webcam from "react-webcam";
-import { Button, Typography, CircularProgress, Box } from "@mui/material";
+import {
+  Button,
+  Typography,
+  CircularProgress,
+  Box,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+} from "@mui/material";
 import Tesseract from "tesseract.js";
 
 const OCRReader: React.FC = () => {
@@ -78,15 +86,31 @@ const OCRReader: React.FC = () => {
           <Typography variant="body1">
             <strong>Extracted Text:</strong>
           </Typography>
-          <ul>
-            {/* {filteredText} */}
-            {/* {filteredText.map((item, index) => (
+          {/* <ul>
+            {filteredText.map((item, index) => (
               <li key={index}>{item}</li>
-            ))} */}
-            {filteredText.map((item) => `${item}, `)}
-          </ul>
+            ))}
+          </ul> */}
+
+          <RadioGroup
+            aria-labelledby="demo-radio-buttons-group-label"
+            name="radio-buttons-group"
+            onChange={(e) => {
+              setText(e.target.value);
+            }}
+          >
+            {filteredText.map((item, index) => (
+              <FormControlLabel
+                value={item}
+                control={<Radio />}
+                label={item}
+                key={index}
+              />
+            ))}
+          </RadioGroup>
         </Box>
       )}
+      <Box>{text}</Box>
 
       {filteredText.length === 0 && !loading && text && (
         <Typography variant="body1">No matching text found.</Typography>
