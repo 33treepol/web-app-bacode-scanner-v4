@@ -44,6 +44,7 @@ const OCRReader: React.FC = () => {
         ref={webcamRef}
         screenshotFormat="image/jpeg"
         width={350}
+        videoConstraints={{ facingMode: { ideal: "environment" } }}
       />
 
       <Box sx={{ mt: 2 }}>
