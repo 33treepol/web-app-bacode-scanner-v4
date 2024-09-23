@@ -6,14 +6,12 @@ import Tesseract from "tesseract.js";
 const OCRReader: React.FC = () => {
   const webcamRef = useRef<Webcam>(null);
   const [text, setText] = useState<string>("");
+  const [filteredText, setFilteredText] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [videoConstraints, setVideoConstraints] =
     useState<MediaTrackConstraints>({
       facingMode: "environment", // Request rear camera
     });
-
-  // Regular expression to filter words with both letters and numbers, allowing "-" and "/"
-  const regex = /\b(?=.*[A-Z])(?=.*\d)[A-Z0-9/-]+\b/g;
 
   const captureAndExtractText = async () => {
     if (webcamRef.current) {
@@ -26,15 +24,17 @@ const OCRReader: React.FC = () => {
           const result = await Tesseract.recognize(imageSrc, "eng", {
             logger: (info) => console.log(info), // Optionally log progress
           });
+          const extractedText = result.data.text; // Get raw text
 
-          // Get extracted text and filter words using the RegEx
-          const extractedText = result.data.text;
-          const filteredWords = extractedText.match(regex);
-
-          // Set filtered text or show a message if nothing was found
-          setText(
-            filteredWords ? filteredWords.join(", ") : "No matching text found."
+          // Filter the text using regex to match your desired format
+          const matches = extractedText.match(
+            /\b(?=.*[A-Z])(?=.*[0-9])[A-Z0-9/-]+\b/g
           );
+          if (matches) {
+            setFilteredText(matches); // Set the filtered text array
+          } else {
+            setFilteredText([]); // Clear if no matches
+          }
         } catch (error) {
           console.error("Error extracting text:", error);
         } finally {
@@ -73,12 +73,23 @@ const OCRReader: React.FC = () => {
         </Button>
       </Box>
 
-      {text && (
+      {filteredText.length > 0 && (
         <Box sx={{ mt: 2 }}>
           <Typography variant="body1">
-            <strong>Extracted Text:</strong> {text}
+            <strong>Extracted Text:</strong>
           </Typography>
+          <ul>
+            {/* {filteredText} */}
+            {/* {filteredText.map((item, index) => (
+              <li key={index}>{item}</li>
+            ))} */}
+            {filteredText.map((item) => `${item}, `)}
+          </ul>
         </Box>
+      )}
+
+      {filteredText.length === 0 && !loading && text && (
+        <Typography variant="body1">No matching text found.</Typography>
       )}
     </Box>
   );
