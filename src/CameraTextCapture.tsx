@@ -1,57 +1,55 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import Webcam from "react-webcam";
-import {
-  Button,
-  Typography,
-  CircularProgress,
-  Box,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-} from "@mui/material";
+import { Button, Typography, CircularProgress, Box } from "@mui/material";
 import Tesseract from "tesseract.js";
 
 const OCRReader: React.FC = () => {
   const webcamRef = useRef<Webcam>(null);
+  const [image, setImage] = useState<string | null>(null);
   const [text, setText] = useState<string>("");
-  const [filteredText, setFilteredText] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [videoConstraints, setVideoConstraints] =
     useState<MediaTrackConstraints>({
       facingMode: "environment", // Request rear camera
     });
 
-  const captureAndExtractText = async () => {
-    setText("");
+  const capture = () => {
     if (webcamRef.current) {
-      const imageSrc = webcamRef.current.getScreenshot(); // Capture image
+      const imageSrc = webcamRef.current.getScreenshot();
+      setImage(imageSrc);
+    }
+  };
 
-      if (imageSrc) {
-        setLoading(true); // Show loading spinner
-        try {
-          // Process image with Tesseract for OCR
-          const result = await Tesseract.recognize(imageSrc, "eng", {
-            logger: (info) => console.log(info), // Optionally log progress
-          });
-          const extractedText = result.data.text; // Get raw text
-
-          // Filter the text using regex to match your desired format
-          const matches = extractedText.match(
-            /\b(?=.*[A-Z])(?=.*[0-9])[A-Z0-9/-]+\b/g
-          );
-          if (matches) {
-            setFilteredText(matches); // Set the filtered text array
-          } else {
-            setFilteredText([]); // Clear if no matches
-          }
-        } catch (error) {
-          console.error("Error extracting text:", error);
-        } finally {
-          setLoading(false); // Stop loading spinner
-        }
+  const extractText = async () => {
+    if (image) {
+      setLoading(true);
+      try {
+        const result = await Tesseract.recognize(image, "eng", {
+          logger: (info) => console.log(info), // Optionally log progress
+        });
+        setText(result.data.text);
+      } catch (error) {
+        console.error("Error extracting text:", error);
+      } finally {
+        setLoading(false);
       }
     }
   };
+
+  useEffect(() => {
+    // Check if the device supports the rear camera and adjust video constraints
+    navigator.mediaDevices.enumerateDevices().then((devices) => {
+      const videoDevices = devices.filter(
+        (device) => device.kind === "videoinput"
+      );
+      const rearCamera = videoDevices.find((device) =>
+        device.label.toLowerCase().includes("back")
+      );
+      if (rearCamera) {
+        setVideoConstraints({ deviceId: rearCamera.deviceId });
+      }
+    });
+  }, []);
 
   return (
     <Box sx={{ textAlign: "center", mt: 4 }}>
@@ -68,53 +66,36 @@ const OCRReader: React.FC = () => {
       />
 
       <Box sx={{ mt: 2 }}>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={captureAndExtractText}
-          disabled={loading}
-        >
-          {loading ? (
-            <CircularProgress size={24} />
-          ) : (
-            "Capture Image & Extract Text"
-          )}
+        <Button variant="contained" color="primary" onClick={capture}>
+          Capture Image
         </Button>
       </Box>
 
-      {filteredText.length > 0 && (
+      {image && (
+        <>
+          <Box sx={{ mt: 2 }}>
+            <img src={image} alt="captured" style={{ maxWidth: "100%" }} />
+          </Box>
+
+          <Box sx={{ mt: 2 }}>
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={extractText}
+              disabled={loading}
+            >
+              {loading ? <CircularProgress size={24} /> : "Extract Text"}
+            </Button>
+          </Box>
+        </>
+      )}
+
+      {text && (
         <Box sx={{ mt: 2 }}>
           <Typography variant="body1">
-            <strong>Extracted Text:</strong>
+            <strong>Extracted Text:</strong> {text}
           </Typography>
-          {/* <ul>
-            {filteredText.map((item, index) => (
-              <li key={index}>{item}</li>
-            ))}
-          </ul> */}
-
-          <RadioGroup
-            aria-labelledby="demo-radio-buttons-group-label"
-            name="radio-buttons-group"
-            onChange={(e) => {
-              setText(e.target.value);
-            }}
-          >
-            {filteredText.map((item, index) => (
-              <FormControlLabel
-                value={item}
-                control={<Radio />}
-                label={item}
-                key={index}
-              />
-            ))}
-          </RadioGroup>
         </Box>
-      )}
-      <Box>{text}</Box>
-
-      {filteredText.length === 0 && !loading && text && (
-        <Typography variant="body1">No matching text found.</Typography>
       )}
     </Box>
   );
