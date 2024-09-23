@@ -22,6 +22,7 @@ const OCRReader: React.FC = () => {
     });
 
   const captureAndExtractText = async () => {
+    setText("");
     if (webcamRef.current) {
       const imageSrc = webcamRef.current.getScreenshot(); // Capture image
 
